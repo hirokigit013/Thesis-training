@@ -3,6 +3,7 @@ import numpy as np
 import argparse
 import pytesseract
 import concurrent.futures
+import time
 
 # 最小サイズの設定（面積）アルファベット"O"などが引っかかってしまうため
 MIN_CIRCLE_AREA = 50
@@ -92,21 +93,36 @@ def read_text_near_arrow_with_cache(image, x1, y1, x2, y2, margin=30):
     ocr_cache[key] = text.strip()
     return ocr_cache[key]
 
-# 矢印が特定の図形に接続されているか確認する関数
+def build_shape_index(shapes):
+    shape_index = {}
+    for shape_id, shape in enumerate(shapes):
+        x, y, w, h = shape['bounding_box']
+        for i in range(x, x + w):
+            for j in range(y, y + h):
+                shape_index[(i, j)] = shape_id
+    return shape_index
+
+def find_shape_at(x, y, shape_index, shapes):
+    if (x, y) in shape_index:
+        shape_id = shape_index[(x, y)]
+        return shapes[shape_id]
+    return None
+
 def check_arrow_connections(shapes, lines, image):
     connections = {shape_id: {"shape": shape, "connected_arrows": [], "texts": []} for shape_id, shape in enumerate(shapes)}
+    shape_index = build_shape_index(shapes)
 
     if lines is not None:
         def process_line(line):
             x1, y1, x2, y2 = line[0]
-            from_shape = find_shape_at(x1, y1, shapes)
-            to_shape = find_shape_at(x2, y2, shapes)
+            from_shape = find_shape_at(x1, y1, shape_index, shapes)
+            to_shape = find_shape_at(x2, y2, shape_index, shapes)
 
             if from_shape and from_shape == to_shape:
                 return None
             
             text = read_text_near_arrow_with_cache(image, x1, y1, x2, y2)
-            return (from_shape, to_shape, (x1, y1, x2, y2), text)
+            return from_shape, to_shape, (x1, y1, x2, y2), text
         
         with concurrent.futures.ThreadPoolExecutor() as executor:
             results = list(executor.map(process_line, lines))
@@ -278,10 +294,12 @@ def main(image_path):
         
     # グレースケールで画像を変換して線を検出
     lines = find_lines(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY))
-    """
+    start_time = time.time()
     # 形状とラインの関係をチェック
     connections = check_arrow_connections(shapes, lines, image)
-
+    end_time = time.time()
+    print(end_time - start_time)
+    """
     # 折れ線矢印を検出
     polyline_arrows = find_polyline_arrows(lines)
 
