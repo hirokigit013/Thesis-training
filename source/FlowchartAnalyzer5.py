@@ -1,20 +1,20 @@
-import cv2  # OpenCVライブラリをインポート
-import numpy as np  # NumPyライブラリをインポート
-import argparse  # コマンドライン引数を解析するためのライブラリをインポート
-import pytesseract  # Tesseract OCRエンジンをインポート
-import concurrent.futures  # 並列処理をサポートするライブラリをインポート
-import time  # 時間測定を行うためのライブラリをインポート
+import cv2
+import numpy as np
+import argparse
+import pytesseract
+import concurrent.futures
+import time
 
-MIN_CIRCLE_AREA = 50  # 最小円領域の定数を定義
-MIN_ELLIPSE_AREA = 50  # 最小楕円領域の定数を定義
-pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'  # Tesseract OCRエンジンのパスを設定
-ocr_cache = {}  # OCRキャッシュを初期化
+MIN_CIRCLE_AREA = 50
+MIN_ELLIPSE_AREA = 50
+pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
+ocr_cache = {}
 
 def extract_text_from_shape(image, bounding_box):
-    x, y, w, h = bounding_box  # バウンディングボックスの座標と寸法を取得
-    roi = image[y:y + h, x:x + w]  # 関心領域を抽出
-    text = pytesseract.image_to_string(roi, config='--psm 6')  # OCRを使用して文字列を抽出
-    return text.strip()  # 抽出したテキストをトリムして返す
+    x, y, w, h = bounding_box
+    roi = image[y:y + h, x:x + w]
+    text = pytesseract.image_to_string(roi, config='--psm 6')
+    return text.strip()
 
 def mask_text_regions(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -267,10 +267,6 @@ def main(image_path, run_connection_check):
                 to_id = shapes.index(to_shape)
                 if (from_id, to_id) not in printed_connections:
                     text = texts[i]
-                    from_text = from_shape["text"]
-                    to_text = to_shape["text"]
-                    # ここで"from -> to"のようなフォーマットで文字列を出力
-                    print(f"{from_text} -> {to_text}")
                     print(f"Shape ID {from_id} ({from_shape['type']}) is connected to Shape ID {to_id} ({to_shape['type']}) with arrow: {arrow}, Text: '{text}'")
                     printed_connections.add((from_id, to_id))
 
